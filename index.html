@@ -1343,106 +1343,120 @@ function leagueEmoji(id) {
 const abbr = name => (name || '???').replace(/\b(\w)/g, l => l).replace(/[a-z]/g, '').slice(0,3).toUpperCase() || name.slice(0,3).toUpperCase();
 const fmtTime = iso => new Date(iso).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
 
+// ── ESPN fetch helper (gratuit, sans clé, CORS OK depuis navigateur) ──
+async function espnFetch(url) {
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+function espnParseTeam(t) {
+  const rec = t.records?.[0]?.summary || '';
+  const parts = rec.split('-').map(Number);
+  const w = parts[0]||0, l = parts[1]||0, tot = w+l+(parts[2]||0);
+  return { name: t.team?.displayName||t.athlete?.displayName||'?', short: t.team?.abbreviation||t.athlete?.lastName||'?', rec, winPct: tot>0?w/tot:0.5 };
+}
+
 async function fetchNBA() {
-  const data = await asFetch(`https://v2.nba.api-sports.io/games?date=${today()}&timezone=Europe/Paris`);
-  if (!data?.response?.length) return [];
-  return data.response.map(g => {
-    const live = g.status.short === 2;
-    const fin  = g.status.short === 3;
-    const hw = (g.teams.home.win && g.teams.home.loss)
-      ? g.teams.home.win / (g.teams.home.win + g.teams.home.loss) : 0.5;
-    const aw = (g.teams.visitors.win && g.teams.visitors.loss)
-      ? g.teams.visitors.win / (g.teams.visitors.win + g.teams.visitors.loss) : 0.5;
+  const d = await espnFetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard');
+  if (!d?.events?.length) return [];
+  return d.events.map(ev => {
+    const comp = ev.competitions?.[0]||{};
+    const teams = comp.competitors||[];
+    const h = teams.find(t=>t.homeAway==='home')||teams[0]||{};
+    const a = teams.find(t=>t.homeAway==='away')||teams[1]||{};
+    const ht = espnParseTeam(h), at = espnParseTeam(a);
+    const live = ev.status?.type?.state==='in';
+    const fin  = ev.status?.type?.state==='post';
+    const per  = comp.status?.period||0;
     return {
-      id: 'nba_' + g.id, sport: 'basketball', league: 'NBA', emoji: '🏀',
-      home: g.teams.home.name,      hS: g.teams.home.code      || abbr(g.teams.home.name),
-      away: g.teams.visitors.name,  aS: g.teams.visitors.code  || abbr(g.teams.visitors.name),
-      hs: (live||fin) ? g.scores.home.points     : null,
-      as: (live||fin) ? g.scores.visitors.points : null,
-      hw, aw,
-      homeRec: g.teams.home.win      ? `${g.teams.home.win}-${g.teams.home.loss}`           : '',
-      awayRec: g.teams.visitors.win  ? `${g.teams.visitors.win}-${g.teams.visitors.loss}`    : '',
-      hForm: gf(hw), aForm: gf(aw),
-      time: fmtTime(g.date.start), date: g.date.start,
-      isLive: live, isFinished: fin,
-      period: g.periods?.current || 0,
-      perLbl: live ? `Q${g.periods?.current || 1}` : '',
-      props: [],
+      id:'nba_'+ev.id, sport:'basketball', league:'NBA', emoji:'🏀',
+      home:ht.name, hS:ht.short, away:at.name, aS:at.short,
+      hs:live||fin?h.score:null, as:live||fin?a.score:null,
+      hw:ht.winPct, aw:at.winPct, homeRec:ht.rec, awayRec:at.rec,
+      hForm:gf(ht.winPct), aForm:gf(at.winPct),
+      time:fmtTime(ev.date), date:ev.date, isLive:live, isFinished:fin,
+      period:per, perLbl:live?`Q${per}`:'', props:[],
     };
   });
 }
 
 async function fetchNHL() {
-  const data = await asFetch(`https://v1.hockey.api-sports.io/games?date=${today()}&league=57&season=${SEASON()}`);
-  if (!data?.response?.length) return [];
-  return data.response.map(g => {
-    const live = ['Q1','Q2','Q3','OT','BT'].includes(g.status.short);
-    const fin  = g.status.short === 'FT';
-    const hw = g.teams.home.winner === true ? 0.64 : g.teams.away.winner === true ? 0.36 : 0.5;
+  const d = await espnFetch('https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard');
+  if (!d?.events?.length) return [];
+  return d.events.map(ev => {
+    const comp = ev.competitions?.[0]||{};
+    const teams = comp.competitors||[];
+    const h = teams.find(t=>t.homeAway==='home')||teams[0]||{};
+    const a = teams.find(t=>t.homeAway==='away')||teams[1]||{};
+    const ht = espnParseTeam(h), at = espnParseTeam(a);
+    const live = ev.status?.type?.state==='in';
+    const fin  = ev.status?.type?.state==='post';
+    const per  = comp.status?.period||0;
     return {
-      id: 'nhl_' + g.id, sport: 'hockey', league: 'NHL', emoji: '🏒',
-      home: g.teams.home.name, hS: abbr(g.teams.home.name),
-      away: g.teams.away.name, aS: abbr(g.teams.away.name),
-      hs: (live||fin) ? g.scores.home : null,
-      as: (live||fin) ? g.scores.away : null,
-      hw, aw: 1-hw, homeRec:'', awayRec:'',
-      hForm: gf(hw), aForm: gf(1-hw),
-      time: fmtTime(g.date), date: g.date,
-      isLive: live, isFinished: fin,
-      period: 0, perLbl: '', props: [],
+      id:'nhl_'+ev.id, sport:'hockey', league:'NHL', emoji:'🏒',
+      home:ht.name, hS:ht.short, away:at.name, aS:at.short,
+      hs:live||fin?h.score:null, as:live||fin?a.score:null,
+      hw:ht.winPct, aw:at.winPct, homeRec:ht.rec, awayRec:at.rec,
+      hForm:gf(ht.winPct), aForm:gf(at.winPct),
+      time:fmtTime(ev.date), date:ev.date, isLive:live, isFinished:fin,
+      period:per, perLbl:live?`P${per}`:'', props:[],
     };
   });
 }
 
 async function fetchMLB() {
-  const data = await asFetch(`https://v1.baseball.api-sports.io/games?date=${today()}&league=1&season=${new Date().getFullYear()}`);
-  if (!data?.response?.length) return [];
-  return data.response.map(g => {
-    const live = ['IN PROGRESS','IP'].includes(g.status.short);
-    const fin  = ['FT','FINAL'].includes(g.status.short);
-    const hw = g.teams.home.win && g.teams.home.loss
-      ? g.teams.home.win / (g.teams.home.win + g.teams.home.loss) : 0.5;
-    const aw = g.teams.away.win && g.teams.away.loss
-      ? g.teams.away.win / (g.teams.away.win + g.teams.away.loss) : 0.5;
+  const d = await espnFetch('https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard');
+  if (!d?.events?.length) return [];
+  return d.events.map(ev => {
+    const comp = ev.competitions?.[0]||{};
+    const teams = comp.competitors||[];
+    const h = teams.find(t=>t.homeAway==='home')||teams[0]||{};
+    const a = teams.find(t=>t.homeAway==='away')||teams[1]||{};
+    const ht = espnParseTeam(h), at = espnParseTeam(a);
+    const live = ev.status?.type?.state==='in';
+    const fin  = ev.status?.type?.state==='post';
     return {
-      id: 'mlb_' + g.id, sport: 'baseball', league: 'MLB', emoji: '⚾',
-      home: g.teams.home.name, hS: abbr(g.teams.home.name),
-      away: g.teams.away.name, aS: abbr(g.teams.away.name),
-      hs: (live||fin) ? g.scores.home.total : null,
-      as: (live||fin) ? g.scores.away.total : null,
-      hw, aw,
-      homeRec: g.teams.home.win ? `${g.teams.home.win}-${g.teams.home.loss}` : '',
-      awayRec: g.teams.away.win ? `${g.teams.away.win}-${g.teams.away.loss}` : '',
-      hForm: gf(hw), aForm: gf(aw),
-      time: fmtTime(g.date), date: g.date,
-      isLive: live, isFinished: fin,
-      period: 0, perLbl: '', props: [],
+      id:'mlb_'+ev.id, sport:'baseball', league:'MLB', emoji:'⚾',
+      home:ht.name, hS:ht.short, away:at.name, aS:at.short,
+      hs:live||fin?h.score:null, as:live||fin?a.score:null,
+      hw:ht.winPct, aw:at.winPct, homeRec:ht.rec, awayRec:at.rec,
+      hForm:gf(ht.winPct), aForm:gf(at.winPct),
+      time:fmtTime(ev.date), date:ev.date, isLive:live, isFinished:fin,
+      period:0, perLbl:'', props:[],
     };
   });
 }
 
 async function fetchTennis() {
-  const data = await asFetch(`https://v1.tennis.api-sports.io/matches?date=${today()}&timezone=Europe/Paris`);
-  if (!data?.response?.length) return [];
-  return data.response.slice(0, 30).map(g => {
-    const live = ['IN PROGRESS','P1','P2','P3','P4','P5'].includes(g.status.short);
-    const fin  = g.status.short === 'FT';
-    const hw = 0.5 + rnd(-0.12, 0.12);
-    const aw = 1 - hw;
+  // ATP + WTA via ESPN
+  const [atp, wta] = await Promise.all([
+    espnFetch('https://site.api.espn.com/apis/site/v2/sports/tennis/atp/scoreboard'),
+    espnFetch('https://site.api.espn.com/apis/site/v2/sports/tennis/wta/scoreboard'),
+  ]);
+  const all = [...(atp?.events||[]), ...(wta?.events||[])];
+  if (!all.length) return [];
+  return all.slice(0,30).map(ev => {
+    const comp = ev.competitions?.[0]||{};
+    const teams = comp.competitors||[];
+    const h = teams[0]||{}, a = teams[1]||{};
+    const hName = h.athlete?.displayName||h.team?.displayName||'Joueur 1';
+    const aName = a.athlete?.displayName||a.team?.displayName||'Joueur 2';
+    const live = ev.status?.type?.state==='in';
+    const fin  = ev.status?.type?.state==='post';
+    const hw = 0.5 + rnd(-0.14, 0.14);
     return {
-      id: 'ten_' + g.id, sport: 'tennis',
-      league: (g.tournament?.name || 'Tennis').slice(0, 22),
-      emoji: '🎾',
-      home: g.players?.home?.name || 'Joueur 1',
-      hS: (g.players?.home?.name || 'J1').split(' ').pop().slice(0, 7),
-      away: g.players?.away?.name || 'Joueur 2',
-      aS: (g.players?.away?.name || 'J2').split(' ').pop().slice(0, 7),
-      hs: null, as: null,
-      hw, aw, homeRec: '', awayRec: '',
-      hForm: gf(hw), aForm: gf(aw),
-      time: fmtTime(g.date), date: g.date,
-      isLive: live, isFinished: fin,
-      period: 0, perLbl: '', props: [],
+      id:'ten_'+ev.id, sport:'tennis',
+      league:(ev.competitions?.[0]?.tournament?.name||ev.league?.name||'Tennis').slice(0,24),
+      emoji:'🎾',
+      home:hName, hS:hName.split(' ').pop().slice(0,8),
+      away:aName, aS:aName.split(' ').pop().slice(0,8),
+      hs:null, as:null, hw, aw:1-hw, homeRec:'', awayRec:'',
+      hForm:gf(hw), aForm:gf(1-hw),
+      time:fmtTime(ev.date), date:ev.date, isLive:live, isFinished:fin,
+      period:0, perLbl:'', props:[],
     };
   });
 }
@@ -1634,6 +1648,9 @@ async function doRefresh() {
   spill('nhl',  nhl.length    ? 'ok' : 'err');
   spill('mlb',  mlb.length    ? 'ok' : 'err');
   spill('ten',  tennis.length ? 'ok' : 'err');
+  // ESPN pills info
+  const espnTotal = nba.length + nhl.length + mlb.length + tennis.length;
+  if (espnTotal > 0) console.log(`ESPN: NBA=${nba.length} NHL=${nhl.length} MLB=${mlb.length} Tennis=${tennis.length}`);
 
   // BDL props for NBA (fire and forget style — non-blocking)
   if (getBdlKey()) {
