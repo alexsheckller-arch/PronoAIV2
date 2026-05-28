@@ -1560,65 +1560,65 @@ function makePicks(m) {
 
   // ── PRÉ-MATCH ─────────────────────────────────────
   if (!isLive) {
-    if (fp >= 0.62) {
+    if (fp >= 0.52) {
       const conf = Math.round(fp * 100);
       const fav  = hw >= aw ? (ten ? m.home : m.hS) : (ten ? m.away : m.aS);
       picks.push({ ico:'🏆', nm: ten ? `${fav} gagne` : `Victoire ${fav}`, desc:`Favori — ${conf}% de confiance sur la forme`, conf, odds: w2o(fp), top: conf >= 72 });
     }
-    if (diff > 0.1 && foot) {
+    if (diff > 0.05 && foot) {
       const dc = hw >= aw ? '1X' : 'X2';
       const c  = Math.min(92, Math.round(fp * 100 + 12));
-      if (c >= 65) picks.push({ ico:'🔰', nm:`Double chance ${dc}`, desc:'Couvre victoire + match nul', conf:c, odds:+(fp*1.26+0.14).toFixed(2), top:c>=74 });
+      if (c >= 58) picks.push({ ico:'🔰', nm:`Double chance ${dc}`, desc:'Couvre victoire + match nul', conf:c, odds:+(fp*1.26+0.14).toFixed(2), top:c>=74 });
     }
     if (foot) {
       const avg = (hw+aw)/2;
       const oc  = Math.round(44 + avg*55 + (diff < 0.1 ? 9 : 0));
       const uc  = 100 - oc;
-      if (oc >= 65 && oc <= 88) picks.push({ ico:'⚽', nm:'Plus de 2.5 buts', desc:'Attaques productives des deux côtés', conf:oc, odds:+(1+(100/oc*0.83)).toFixed(2), top:oc>=72 });
-      else if (uc >= 65)        picks.push({ ico:'🔒', nm:'Moins de 2.5 buts', desc:'Match défensif et serré attendu', conf:uc, odds:+(1+(100/uc*0.83)).toFixed(2), top:uc>=72 });
+      if (oc >= 58 && oc <= 88) picks.push({ ico:'⚽', nm:'Plus de 2.5 buts', desc:'Attaques productives des deux côtés', conf:oc, odds:+(1+(100/oc*0.83)).toFixed(2), top:oc>=68 });
+      else if (uc >= 58)        picks.push({ ico:'🔒', nm:'Moins de 2.5 buts', desc:'Match défensif et serré attendu', conf:uc, odds:+(1+(100/uc*0.83)).toFixed(2), top:uc>=68 });
     }
-    if (foot && diff < 0.14) {
+    if (foot && diff < 0.3) {
       const c = Math.round(50 + (1-diff)*22 + rnd(0,8));
-      if (c >= 65) picks.push({ ico:'⚡', nm:'BTTS — Les 2 équipes marquent', desc:'Match équilibré, les deux attaques en forme', conf:c, odds:+(1+(100/c*0.88)).toFixed(2), top:false });
+      if (c >= 58) picks.push({ ico:'⚡', nm:'BTTS — Les 2 équipes marquent', desc:'Match équilibré, les deux attaques en forme', conf:c, odds:+(1+(100/c*0.88)).toFixed(2), top:false });
     }
-    if (!ten && diff > 0.18) {
+    if (!ten && diff > 0.08) {
       const c   = Math.round(fp*100 - 4 + rnd(0,6));
       const v   = nba ? '-5.5' : nhl ? '-0.5' : mlb ? '-0.5' : '-1';
       const fav = hw >= aw ? m.hS : m.aS;
-      if (c >= 65) picks.push({ ico:'📐', nm:`Handicap ${fav} ${v}`, desc:'Le favori couvre le handicap asiatique', conf:c, odds:+(1+(100/c*0.91)).toFixed(2), top:c>=70 });
+      if (c >= 58) picks.push({ ico:'📐', nm:`Handicap ${fav} ${v}`, desc:'Le favori couvre le handicap asiatique', conf:c, odds:+(1+(100/c*0.91)).toFixed(2), top:c>=70 });
     }
     if (nba) {
       const c = Math.round(62 + rnd(0,13)), isO = rnd(0,1) > 0.5, line = 220 + Math.round(rnd(-12,12));
-      if (c >= 65) picks.push({ ico:'🏀', nm:`${isO?'Over':'Under'} ${line} pts total`, desc:isO?'Rythme offensif élevé attendu':'Match défensif, pression défensive forte', conf:c, odds:+(1+(100/c*0.88)).toFixed(2), top:c>=72 });
+      if (c >= 58) picks.push({ ico:'🏀', nm:`${isO?'Over':'Under'} ${line} pts total`, desc:isO?'Rythme offensif élevé attendu':'Match défensif, pression défensive forte', conf:c, odds:+(1+(100/c*0.88)).toFixed(2), top:c>=72 });
     }
     if (nhl) {
       const c = Math.round(63 + rnd(0,11)), isO = rnd(0,1) > 0.45;
-      if (c >= 65) picks.push({ ico:'🏒', nm:`${isO?'Over':'Under'} 5.5 buts`, desc:isO?'Gardiens en difficulté':'Gardiens en grande forme', conf:c, odds:+(1+(100/c*0.88)).toFixed(2), top:false });
+      if (c >= 58) picks.push({ ico:'🏒', nm:`${isO?'Over':'Under'} 5.5 buts`, desc:isO?'Gardiens en difficulté':'Gardiens en grande forme', conf:c, odds:+(1+(100/c*0.88)).toFixed(2), top:false });
     }
     if (mlb) {
       const c = Math.round(62 + rnd(0,12)), isO = rnd(0,1) > 0.5;
-      if (c >= 65) picks.push({ ico:'⚾', nm:`${isO?'Over':'Under'} 8.5 runs`, desc:isO?'Lanceurs en difficulté, rotation 5':'Ace au départ, ERA < 3.00', conf:c, odds:+(1+(100/c*0.87)).toFixed(2), top:false });
+      if (c >= 58) picks.push({ ico:'⚾', nm:`${isO?'Over':'Under'} 8.5 runs`, desc:isO?'Lanceurs en difficulté, rotation 5':'Ace au départ, ERA < 3.00', conf:c, odds:+(1+(100/c*0.87)).toFixed(2), top:false });
     }
     if (ten) {
-      const c = Math.round(65 + rnd(0,13)), is2 = diff > 0.18;
-      picks.push({ ico:'🎾', nm: is2 ? 'Match en 2 sets directs' : '3 sets probables', desc: is2 ? 'Écart de niveau significatif' : 'Match très serré, 3 sets attendus', conf:c, odds:+(1+(100/c*0.87)).toFixed(2), top:c>=74 });
+      const c = Math.round(60 + rnd(0,18)), is2 = diff > 0.12;
+      picks.push({ ico:'🎾', nm: is2 ? 'Match en 2 sets directs' : '3 sets probables', desc: is2 ? 'Écart de niveau significatif' : 'Match très serré, 3 sets attendus', conf:c, odds:+(1+(100/c*0.87)).toFixed(2), top:c>=68 });
     }
     // BDL player props
     if (nba && m.props?.length) {
       m.props.forEach(p => { if (p.conf >= 65) picks.push(p); });
     } else if (nba && !getBdlKey()) {
       const pts = 18 + Math.round(rnd(0,13)), c = Math.round(64 + rnd(0,9));
-      if (c >= 65) picks.push({ ico:'🌟', nm:`Star ${m.hS} Over ${pts}.5 pts`, desc:'Configure ta clé BDL pour les vraies stats NBA', conf:c, odds:+(1+(100/c*0.9)).toFixed(2), top:false });
+      if (c >= 58) picks.push({ ico:'🌟', nm:`Star ${m.hS} Over ${pts}.5 pts`, desc:'Configure ta clé BDL pour les vraies stats NBA', conf:c, odds:+(1+(100/c*0.9)).toFixed(2), top:false });
     }
   }
 
-  return picks.filter(p => p.conf >= 65).sort((a,b) => b.conf - a.conf).slice(0, 5);
+  return picks.filter(p => p.conf >= 58).sort((a,b) => b.conf - a.conf).slice(0, 5);
 }
 
 function sigOf(picks) {
   if (!picks.length) return 'weak';
   const m = picks[0].conf;
-  return m >= 72 ? 'strong' : m >= 65 ? 'medium' : 'weak';
+  return m >= 68 ? 'strong' : m >= 58 ? 'medium' : 'weak';
 }
 
 // ══════════════════════════════════════════════════════
@@ -1677,7 +1677,7 @@ async function doRefresh() {
     .sort((a,b) => new Date(a.date||0) - new Date(b.date||0))
     .filter(m => { if (seen.has(m.id)) return false; seen.add(m.id); return true; })
     .map(m => { m.picks = makePicks(m); m.sig = sigOf(m.picks); return m; })
-    .filter(m => m.picks.length > 0);
+    .filter(m => m.picks.length > 0); // au moins 1 pick par match
 
   aiCache = {};
   renderMatches();
@@ -1713,7 +1713,7 @@ function setTab(t, el) {
 function renderMatches() {
   const wrap = document.getElementById('cardsWrap');
   let list;
-  if      (activeTab === 'all')  list = allMatches.filter(m => m.sig === 'strong');
+  if      (activeTab === 'all')  list = allMatches.filter(m => m.sig === 'strong' || m.sig === 'medium');
   else if (activeTab === 'live') list = allMatches.filter(m => m.isLive);
   else                           list = allMatches.filter(m => m.sport === activeTab);
 
@@ -1747,9 +1747,9 @@ function cardHTML(m, i) {
     const kl   = kelly(b.current, p.conf, p.odds);
     const klPct = kl > 0 ? +((kl / b.current) * 100).toFixed(1) : 0;
     const klHTML = kl > 0
-      ? `<div class="pick-kelly${klPct > 12 ? ' warn' : ''}">📐 Kelly: ${kl}€ (${klPct}%)</div>`
+      ? `<div class="pick-kelly${klPct > 15 ? ' warn' : ''}">📐 Kelly: ${kl}€ (${klPct}%)</div>`
       : '';
-    const confColor = p.conf >= 72 ? 'var(--lime)' : p.conf >= 65 ? 'var(--amber)' : 'var(--coral)';
+    const confColor = p.conf >= 68 ? 'var(--lime)' : p.conf >= 58 ? 'var(--amber)' : 'var(--coral)';
     return `
     <div class="pick-row${p.top ? ' top-pick' : ''}">
       <div class="pick-icon">${p.ico}</div>
@@ -1800,7 +1800,7 @@ function cardHTML(m, i) {
       </div>
     </div>
     <div class="picks-hdr">
-      <div class="picks-hdr-label">🎯 Picks ≥65% confiance</div>
+      <div class="picks-hdr-label">🎯 Picks du match</div>
       <div class="picks-mode-tag ${m.isLive?'live':'pre'}">${m.isLive?'⚡ LIVE':'🕐 PRÉ-MATCH'}</div>
     </div>
     <div class="picks-list">${picksHTML}</div>
